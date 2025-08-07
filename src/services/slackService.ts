@@ -11,8 +11,19 @@ class SlackService {
     this.clientSecret = process.env.SLACK_CLIENT_SECRET!;
     this.redirectUri = process.env.SLACK_REDIRECT_URI!;
 
+    console.log('🔧 SlackService initialized');
+    console.log('🔑 Client ID:', this.clientId ? `${this.clientId.substring(0, 10)}...` : 'MISSING');
+    console.log('🔒 Client Secret:', this.clientSecret ? 'Present' : 'MISSING');
+    console.log('🔗 Redirect URI:', this.redirectUri);
+
     if (!this.clientId || !this.clientSecret || !this.redirectUri) {
-      throw new Error('Missing required Slack configuration');
+      const missing = [];
+      if (!this.clientId) missing.push('SLACK_CLIENT_ID');
+      if (!this.clientSecret) missing.push('SLACK_CLIENT_SECRET');
+      if (!this.redirectUri) missing.push('SLACK_REDIRECT_URI');
+      
+      console.error('❌ Missing Slack configuration:', missing.join(', '));
+      throw new Error(`Missing required Slack configuration: ${missing.join(', ')}`);
     }
   }
 

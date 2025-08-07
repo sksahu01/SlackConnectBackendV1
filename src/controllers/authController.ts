@@ -18,6 +18,13 @@ class AuthController {
     this.authService = new AuthService();
     this.slackService = new SlackService();
     this.db = new DatabaseManager();
+
+    // Log configuration for debugging
+    console.log('🔧 AuthController initialized');
+    console.log('🌐 Frontend URL:', process.env.FRONTEND_URL);
+    console.log('🔗 Slack Redirect URI:', process.env.SLACK_REDIRECT_URI);
+    console.log('🔑 Slack Client ID present:', !!process.env.SLACK_CLIENT_ID);
+    console.log('🔒 Slack Client Secret present:', !!process.env.SLACK_CLIENT_SECRET);
   }
 
   /**
