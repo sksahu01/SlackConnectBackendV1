@@ -34,4 +34,35 @@ router.get('/debug/config', (req, res) => {
   });
 });
 
+// Test webhook endpoint
+router.post('/test/webhook', async (req, res) => {
+  try {
+    const { webhook_url, message } = req.body;
+
+    if (!webhook_url || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'webhook_url and message are required'
+      });
+    }
+
+    // Import SlackService dynamically to avoid circular dependency
+    const SlackService = (await import('../services/slackService')).default;
+    const slackService = new SlackService();
+
+    await slackService.sendWebhookMessage(webhook_url, message);
+
+    res.json({
+      success: true,
+      message: 'Webhook message sent successfully'
+    });
+  } catch (error) {
+    console.error('Test webhook error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send webhook message'
+    });
+  }
+});
+
 export default router;

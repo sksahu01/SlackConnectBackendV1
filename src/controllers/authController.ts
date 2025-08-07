@@ -59,6 +59,11 @@ class AuthController {
     try {
       const { code, state, error } = req.query;
 
+      console.log('🔄 Handling OAuth callback...');
+      console.log('🔑 Code present:', !!code);
+      console.log('🎲 State:', state);
+      console.log('❌ Error:', error);
+
       if (error) {
         console.error('OAuth error:', error);
         res.redirect(`${process.env.FRONTEND_URL}/auth/error?error=${encodeURIComponent(error as string)}`);
@@ -66,48 +71,71 @@ class AuthController {
       }
 
       if (!code) {
+        console.error('No code provided in callback');
         res.redirect(`${process.env.FRONTEND_URL}/auth/error?error=no_code`);
         return;
       }
 
       // Exchange code for tokens
+      console.log('🔄 Exchanging code for tokens...');
       const oauthResponse: SlackOAuthResponse = await this.slackService.exchangeCodeForToken(code as string);
 
-      // Get user info from Slack
-      const slackUser = await this.slackService.getUserInfo(oauthResponse.authed_user.access_token);
+      console.log('✅ OAuth exchange successful');
+      console.log('🎯 Team ID:', oauthResponse.team?.id);
+      console.log('👤 Authed user ID:', oauthResponse.authed_user?.id);
+      console.log('🔑 Bot access token present:', !!oauthResponse.access_token);
+      console.log('🔑 User access token present:', !!oauthResponse.authed_user?.access_token);
+      console.log('🪝 Webhook URL present:', !!oauthResponse.incoming_webhook?.url);
+
+      // Use the bot token for API calls (has more permissions)
+      const botToken = oauthResponse.access_token;
+      const userToken = oauthResponse.authed_user.access_token;
+      const webhookUrl = oauthResponse.incoming_webhook?.url;
+
+      // Get user info from Slack using user token
+      console.log('👤 Getting user info...');
+      const slackUser = await this.slackService.getUserInfo(userToken);
+
+      console.log('✅ User info retrieved:', slackUser.id, slackUser.name);
 
       // Check if user already exists
       let user = this.db.getUserBySlackId(slackUser.id);
 
       if (user) {
-        // Update existing user's tokens
+        console.log('👤 Updating existing user...');
+        // Update existing user's tokens and webhook
         this.db.updateUser(user.id, {
-          access_token: oauthResponse.authed_user.access_token,
+          access_token: botToken, // Store bot token for message sending
           team_id: oauthResponse.team.id,
+          webhook_url: webhookUrl,
           token_expires_at: undefined // Slack tokens don't have explicit expiry
         });
 
         // Refetch updated user
         user = this.db.getUserById(user.id)!;
       } else {
+        console.log('👤 Creating new user...');
         // Create new user
         user = this.db.createUser({
           id: uuidv4(),
           slack_user_id: slackUser.id,
           team_id: oauthResponse.team.id,
-          access_token: oauthResponse.authed_user.access_token,
+          access_token: botToken, // Store bot token for message sending
           refresh_token: undefined, // Slack doesn't provide refresh tokens
+          webhook_url: webhookUrl,
           token_expires_at: undefined
         });
       }
 
       // Generate JWT token
+      console.log('🔐 Generating JWT token...');
       const jwtToken = this.authService.generateToken(user);
 
       // Redirect to frontend with token
+      console.log('🔄 Redirecting to frontend...');
       res.redirect(`${process.env.FRONTEND_URL}/auth/success?token=${jwtToken}`);
     } catch (error) {
-      console.error('Error handling Slack callback:', error);
+      console.error('❌ Error handling Slack callback:', error);
       res.redirect(`${process.env.FRONTEND_URL}/auth/error?error=callback_failed`);
     }
   };

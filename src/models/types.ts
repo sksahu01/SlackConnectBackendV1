@@ -5,6 +5,7 @@ export interface User {
   team_id: string;
   access_token: string;
   refresh_token?: string;
+  webhook_url?: string;
   token_expires_at?: number;
   created_at: number;
   updated_at: number;

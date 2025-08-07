@@ -34,11 +34,20 @@ class DatabaseManager {
         team_id TEXT NOT NULL,
         access_token TEXT NOT NULL,
         refresh_token TEXT,
+        webhook_url TEXT,
         token_expires_at INTEGER,
         created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
         updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
       )
     `);
+
+    // Add webhook_url column if it doesn't exist (for existing databases)
+    try {
+      this.db.exec(`ALTER TABLE users ADD COLUMN webhook_url TEXT DEFAULT NULL`);
+    } catch (error) {
+      // Column already exists or other error, continue
+      console.log('Webhook URL column already exists or error adding it');
+    }
 
     // Scheduled messages table
     this.db.exec(`

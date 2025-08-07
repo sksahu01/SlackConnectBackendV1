@@ -21,7 +21,7 @@ class SlackService {
       if (!this.clientId) missing.push('SLACK_CLIENT_ID');
       if (!this.clientSecret) missing.push('SLACK_CLIENT_SECRET');
       if (!this.redirectUri) missing.push('SLACK_REDIRECT_URI');
-      
+
       console.error('❌ Missing Slack configuration:', missing.join(', '));
       throw new Error(`Missing required Slack configuration: ${missing.join(', ')}`);
     }
@@ -33,16 +33,20 @@ class SlackService {
   getAuthUrl(state?: string): string {
     const params = new URLSearchParams({
       client_id: this.clientId,
-      scope: 'channels:read,chat:write,users:read',
+      scope: 'channels:read,chat:write,users:read,incoming-webhook',
       redirect_uri: this.redirectUri,
       response_type: 'code',
+      user_scope: 'identity.basic,identity.email', // User token scopes
     });
 
     if (state) {
       params.append('state', state);
     }
 
-    return `https://slack.com/oauth/v2/authorize?${params.toString()}`;
+    const authUrl = `https://slack.com/oauth/v2/authorize?${params.toString()}`;
+    console.log('🔗 Generated auth URL:', authUrl);
+
+    return authUrl;
   }
 
   /**
@@ -50,14 +54,20 @@ class SlackService {
    */
   async exchangeCodeForToken(code: string): Promise<SlackOAuthResponse> {
     try {
+      console.log('🔄 Exchanging OAuth code for token...');
+      console.log('🔑 Client ID:', this.clientId ? `${this.clientId.substring(0, 10)}...` : 'MISSING');
+      console.log('🔗 Redirect URI:', this.redirectUri);
+
+      const params = new URLSearchParams({
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        code: code,
+        redirect_uri: this.redirectUri,
+      });
+
       const response: AxiosResponse<SlackOAuthResponse> = await axios.post(
         'https://slack.com/api/oauth.v2.access',
-        {
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          code,
-          redirect_uri: this.redirectUri,
-        },
+        params.toString(),
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -65,13 +75,22 @@ class SlackService {
         }
       );
 
+      console.log('📋 OAuth response status:', response.status);
+      console.log('📋 OAuth response ok:', response.data.ok);
+
       if (!response.data.ok) {
+        console.error('❌ OAuth exchange failed:', response.data);
         throw new Error(`OAuth exchange failed: ${JSON.stringify(response.data)}`);
       }
 
+      console.log('✅ OAuth exchange successful');
       return response.data;
     } catch (error) {
-      console.error('Error exchanging OAuth code:', error);
+      console.error('❌ Error exchanging OAuth code:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('📋 Response data:', error.response?.data);
+        console.error('📋 Response status:', error.response?.status);
+      }
       throw new Error('Failed to exchange OAuth code for token');
     }
   }
@@ -81,22 +100,51 @@ class SlackService {
    */
   async getUserInfo(accessToken: string): Promise<SlackUser> {
     try {
+      console.log('👤 Getting user info...');
+      console.log('🔑 Access token present:', !!accessToken);
+
+      // First, get the current user's ID
+      const authResponse = await axios.get('https://slack.com/api/auth.test', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      console.log('🔍 Auth test response:', authResponse.data);
+
+      if (!authResponse.data.ok) {
+        throw new Error(`Failed to test auth: ${authResponse.data.error}`);
+      }
+
+      const userId = authResponse.data.user_id;
+      console.log('👤 User ID:', userId);
+
+      // Now get the user's detailed information
       const response = await axios.get('https://slack.com/api/users.info', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
         params: {
-          user: 'me',
+          user: userId,
         },
       });
 
+      console.log('📋 User info response status:', response.status);
+      console.log('📋 User info response ok:', response.data.ok);
+
       if (!response.data.ok) {
+        console.error('❌ Failed to get user info:', response.data);
         throw new Error(`Failed to get user info: ${response.data.error}`);
       }
 
+      console.log('✅ User info retrieved successfully');
       return response.data.user;
     } catch (error) {
-      console.error('Error getting user info:', error);
+      console.error('❌ Error getting user info:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('📋 Response data:', error.response?.data);
+        console.error('📋 Response status:', error.response?.status);
+      }
       throw new Error('Failed to get user information');
     }
   }
@@ -158,6 +206,31 @@ class SlackService {
     } catch (error) {
       console.error('Error sending message:', error);
       throw new Error('Failed to send message');
+    }
+  }
+
+  /**
+   * Send a message using webhook URL (simpler alternative)
+   */
+  async sendWebhookMessage(webhookUrl: string, text: string): Promise<void> {
+    try {
+      console.log('🪝 Sending webhook message...');
+      const response = await axios.post(webhookUrl, {
+        text: text
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`Webhook failed with status: ${response.status}`);
+      }
+
+      console.log('✅ Webhook message sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending webhook message:', error);
+      throw new Error('Failed to send webhook message');
     }
   }
 
