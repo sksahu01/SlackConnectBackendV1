@@ -33,8 +33,14 @@ class Server {
     }));
 
     // CORS configuration
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://slackconnectfrontendv1.netlify.app',
+      'http://localhost:3000' // For development
+    ].filter((origin): origin is string => Boolean(origin));
+
     this.app.use(cors({
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: allowedOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
