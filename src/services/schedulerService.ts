@@ -81,7 +81,27 @@ class SchedulerService {
    */
   private async sendScheduledMessage(message: ScheduledMessage): Promise<void> {
     try {
-      // Get user to retrieve access token
+      // Check if this is a webhook message
+      if (message.user_id === 'webhook-user') {
+        // Handle webhook-based message
+        const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+        if (!webhookUrl) {
+          throw new Error('Webhook URL not configured');
+        }
+
+        await this.slackService.sendWebhookMessage(webhookUrl, message.message);
+
+        // Update message status to sent
+        this.db.updateScheduledMessage(message.id, {
+          status: 'sent',
+          sent_at: Math.floor(Date.now() / 1000)
+        });
+
+        console.log(`Successfully sent scheduled webhook message ${message.id} to TeamAlpha workspace`);
+        return;
+      }
+
+      // Handle OAuth-based message
       const user = this.db.getUserById(message.user_id);
       if (!user) {
         throw new Error(`User not found: ${message.user_id}`);

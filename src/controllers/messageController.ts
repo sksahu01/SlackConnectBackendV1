@@ -236,8 +236,16 @@ class MessageController {
         return;
       }
 
-      // Use TeamAlpha webhook directly
-      const teamAlphaWebhook = 'https://hooks.slack.com/services/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';
+      // Use TeamAlpha webhook from environment variable
+      const teamAlphaWebhook = process.env.SLACK_WEBHOOK_URL;
+
+      if (!teamAlphaWebhook) {
+        res.status(500).json({
+          success: false,
+          error: 'Webhook URL not configured'
+        } as ApiResponse);
+        return;
+      }
 
       await this.slackService.sendWebhookMessage(teamAlphaWebhook, message);
 

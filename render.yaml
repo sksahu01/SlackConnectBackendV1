@@ -6,27 +6,6 @@ services:
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        sync: false
-      - key: FRONTEND_URL
-        value: https://slackconnectfrontendv1.netlify.app
-      - key: SLACK_CLIENT_ID
-        sync: false
-      - key: SLACK_CLIENT_SECRET
-        sync: false
-      - key: SLACK_REDIRECT_URI
-        value: https://slackconnectbackendv1.onrender.com/api/auth/callback
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_EXPIRES_IN
-        value: 7d
-      - key: DATABASE_PATH
-        value: /opt/render/project/src/data/slack_connect.db
-      - key: LOG_LEVEL
-        value: info
     autoDeploy: false
     envVars:
       - key: NODE_ENV
@@ -41,6 +20,8 @@ services:
         sync: false
       - key: SLACK_REDIRECT_URI
         value: https://slackconnectbackendv1.onrender.com/api/auth/callback
+      - key: SLACK_WEBHOOK_URL
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
@@ -49,26 +30,3 @@ services:
         value: /opt/render/project/src/data/slack_connect.db
       - key: LOG_LEVEL
         value: info
-    autoDeploy: false
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        sync: false
-      - key: FRONTEND_URL
-        value: https://slackconnectfrontendv1.netlify.app
-      - key: SLACK_CLIENT_ID
-        sync: false
-      - key: SLACK_CLIENT_SECRET
-        sync: false
-      - key: SLACK_REDIRECT_URI
-        value: https://slackconnectbackendv1.onrender.com/api/auth/callback
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_EXPIRES_IN
-        value: 7d
-      - key: DATABASE_PATH
-        value: /opt/render/project/src/data/slack_connect.db
-      - key: LOG_LEVEL
-        value: info
-    autoDeploy: false
