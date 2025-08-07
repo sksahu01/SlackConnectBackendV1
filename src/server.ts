@@ -84,7 +84,8 @@ class Server {
       console.log(`📅 Environment: ${process.env.NODE_ENV || 'development'}`);
 
       if (process.env.NODE_ENV === 'production') {
-        console.log(`🔗 API URL: https://slack-connect-backend.onrender.com/api`);
+        console.log(`🔗 API URL: https://slackconnectbackendv1.onrender.com/api`);
+        console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
       } else {
         console.log(`🔗 API URL: http://localhost:${this.port}/api`);
       }

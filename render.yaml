@@ -12,13 +12,13 @@ services:
       - key: PORT
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: https://slackconnectfrontendv1.netlify.app
       - key: SLACK_CLIENT_ID
         sync: false
       - key: SLACK_CLIENT_SECRET
         sync: false
       - key: SLACK_REDIRECT_URI
-        sync: false
+        value: https://slackconnectbackendv1.onrender.com/api/auth/callback
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
