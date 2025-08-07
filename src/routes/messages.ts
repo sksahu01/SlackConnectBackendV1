@@ -9,6 +9,9 @@ const messageController = new MessageController();
 // Webhook routes (no authentication required)
 router.post('/webhook/send', messageController.sendWebhookMessage);
 router.post('/webhook/schedule', messageController.scheduleWebhookMessage);
+router.get('/webhook/scheduled', messageController.getWebhookScheduledMessages);
+router.delete('/webhook/scheduled/:id', messageController.cancelWebhookScheduledMessage);
+router.put('/webhook/scheduled/:id', messageController.updateWebhookScheduledMessage);
 
 // All other message routes require authentication
 router.use(authenticateToken);

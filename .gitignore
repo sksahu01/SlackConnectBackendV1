@@ -60,3 +60,5 @@ database/
 logs
 *.log
 OAUTH-SUCCESS.md
+test-webhook-api.ps1
+webhook-api-tests.md

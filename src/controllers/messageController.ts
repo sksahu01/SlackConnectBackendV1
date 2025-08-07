@@ -237,7 +237,7 @@ class MessageController {
       }
 
       // Use TeamAlpha webhook directly
-      const teamAlphaWebhook = 'https://hooks.slack.com/services/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';
+      const teamAlphaWebhook = 'https://hooks.slack.com/services/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';
 
       await this.slackService.sendWebhookMessage(teamAlphaWebhook, message);
 
@@ -296,6 +296,169 @@ class MessageController {
       res.status(500).json({
         success: false,
         error: 'Failed to schedule message'
+      } as ApiResponse);
+    }
+  };
+
+  /**
+   * Get all scheduled webhook messages (no auth required)
+   */
+  public getWebhookScheduledMessages = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Get all scheduled messages for webhook user
+      const scheduledMessages = this.db.getScheduledMessagesByUserId('webhook-user');
+
+      res.json({
+        success: true,
+        data: scheduledMessages.map(msg => ({
+          id: msg.id,
+          message: msg.message,
+          scheduled_for: msg.scheduled_for,
+          status: msg.status,
+          created_at: msg.created_at,
+          sent_at: msg.sent_at,
+          error_message: msg.error_message,
+          // Convert timestamps to readable dates for UI - handle both string and number formats
+          scheduled_for_readable: typeof msg.scheduled_for === 'string' ? msg.scheduled_for : new Date(msg.scheduled_for * 1000).toISOString(),
+          created_at_readable: typeof msg.created_at === 'string' ? msg.created_at : new Date(msg.created_at * 1000).toISOString(),
+          sent_at_readable: msg.sent_at ? (typeof msg.sent_at === 'string' ? msg.sent_at : new Date(msg.sent_at * 1000).toISOString()) : null
+        })),
+        message: 'Scheduled messages retrieved successfully'
+      } as ApiResponse);
+    } catch (error) {
+      console.error('Error getting webhook scheduled messages:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get scheduled messages'
+      } as ApiResponse);
+    }
+  };
+
+  /**
+   * Cancel a scheduled webhook message (no auth required)
+   */
+  public cancelWebhookScheduledMessage = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Message ID is required'
+        } as ApiResponse);
+        return;
+      }
+
+      // Get the message to verify it's a webhook message and exists
+      const scheduledMessages = this.db.getScheduledMessagesByUserId('webhook-user');
+      const message = scheduledMessages.find(msg => msg.id === id);
+
+      if (!message) {
+        res.status(404).json({
+          success: false,
+          error: 'Scheduled message not found'
+        } as ApiResponse);
+        return;
+      }
+
+      if (message.status !== 'pending') {
+        res.status(400).json({
+          success: false,
+          error: `Cannot cancel message with status: ${message.status}`
+        } as ApiResponse);
+        return;
+      }
+
+      // Cancel the message
+      this.db.updateScheduledMessage(id, {
+        status: 'cancelled'
+      });
+
+      res.json({
+        success: true,
+        message: 'Scheduled message cancelled successfully'
+      } as ApiResponse);
+    } catch (error) {
+      console.error('Error cancelling webhook scheduled message:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to cancel scheduled message'
+      } as ApiResponse);
+    }
+  };
+
+  /**
+   * Update a scheduled webhook message (no auth required)
+   */
+  public updateWebhookScheduledMessage = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { message, scheduled_for } = req.body;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Message ID is required'
+        } as ApiResponse);
+        return;
+      }
+
+      // Get the message to verify it's a webhook message and exists
+      const scheduledMessages = this.db.getScheduledMessagesByUserId('webhook-user');
+      const existingMessage = scheduledMessages.find(msg => msg.id === id);
+
+      if (!existingMessage) {
+        res.status(404).json({
+          success: false,
+          error: 'Scheduled message not found'
+        } as ApiResponse);
+        return;
+      }
+
+      if (existingMessage.status !== 'pending') {
+        res.status(400).json({
+          success: false,
+          error: `Cannot update message with status: ${existingMessage.status}`
+        } as ApiResponse);
+        return;
+      }
+
+      // Prepare updates
+      const updates: any = {};
+      if (message) updates.message = message;
+      if (scheduled_for) updates.scheduled_for = scheduled_for;
+
+      if (Object.keys(updates).length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'No valid fields to update (message, scheduled_for)'
+        } as ApiResponse);
+        return;
+      }
+
+      // Update the message
+      this.db.updateScheduledMessage(id, updates);
+
+      // Get updated message
+      const updatedMessages = this.db.getScheduledMessagesByUserId('webhook-user');
+      const updatedMessage = updatedMessages.find(msg => msg.id === id);
+
+      res.json({
+        success: true,
+        data: {
+          id: updatedMessage!.id,
+          message: updatedMessage!.message,
+          scheduled_for: updatedMessage!.scheduled_for,
+          status: updatedMessage!.status,
+          scheduled_for_readable: typeof updatedMessage!.scheduled_for === 'string' ? updatedMessage!.scheduled_for : new Date(updatedMessage!.scheduled_for * 1000).toISOString()
+        },
+        message: 'Scheduled message updated successfully'
+      } as ApiResponse);
+    } catch (error) {
+      console.error('Error updating webhook scheduled message:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update scheduled message'
       } as ApiResponse);
     }
   };
