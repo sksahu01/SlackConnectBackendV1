@@ -59,3 +59,4 @@ database/
 # Logs
 logs
 *.log
+OAUTH-SUCCESS.md
