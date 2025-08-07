@@ -238,6 +238,7 @@ class MessageController {
 
       // Use TeamAlpha webhook from environment variable
       const teamAlphaWebhook = process.env.SLACK_WEBHOOK_URL;
+      console.log('🔗 Using webhook URL:', teamAlphaWebhook ? `${teamAlphaWebhook.substring(0, 50)}...` : 'NOT CONFIGURED');
 
       if (!teamAlphaWebhook) {
         res.status(500).json({

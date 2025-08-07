@@ -33,10 +33,10 @@ class SlackService {
   getAuthUrl(state?: string): string {
     const params = new URLSearchParams({
       client_id: this.clientId,
-      scope: 'channels:read,chat:write,users:read,incoming-webhook',
+      scope: 'channels:read,chat:write,users:read,incoming-webhook,bot',
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      user_scope: 'identity.basic,identity.email', // User token scopes
+      user_scope: 'identity.basic,identity.email,identity.team', // User token scopes
     });
 
     if (state) {

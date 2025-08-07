@@ -62,3 +62,6 @@ logs
 OAUTH-SUCCESS.md
 test-webhook-api.ps1
 webhook-api-tests.md
+SLACK_OAUTH_FIX.md
+debug-oauth.ps1
+test-slack-config.ps1
