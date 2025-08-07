@@ -6,7 +6,11 @@ import { validate, schemas } from '../middleware/validation';
 const router = Router();
 const messageController = new MessageController();
 
-// All message routes require authentication
+// Webhook routes (no authentication required)
+router.post('/webhook/send', messageController.sendWebhookMessage);
+router.post('/webhook/schedule', messageController.scheduleWebhookMessage);
+
+// All other message routes require authentication
 router.use(authenticateToken);
 
 // Channel management

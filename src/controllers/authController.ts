@@ -92,11 +92,50 @@ class AuthController {
       const userToken = oauthResponse.authed_user.access_token;
       const webhookUrl = oauthResponse.incoming_webhook?.url;
 
-      // Get user info from Slack using user token
-      console.log('👤 Getting user info...');
-      const slackUser = await this.slackService.getUserInfo(userToken);
+      // Get user info directly from OAuth response (more reliable)
+      console.log('👤 Getting user info from OAuth response...');
+      const userId = oauthResponse.authed_user.id;
 
-      console.log('✅ User info retrieved:', slackUser.id, slackUser.name);
+      // Create a minimal user object from OAuth data
+      const slackUser = {
+        id: userId,
+        team_id: oauthResponse.team.id,
+        name: userId, // We'll use ID as name since we don't have display name
+        // Add other required fields with defaults
+        deleted: false,
+        color: '',
+        real_name: userId,
+        tz: '',
+        tz_label: '',
+        tz_offset: 0,
+        profile: {
+          avatar_hash: '',
+          status_text: '',
+          status_emoji: '',
+          real_name: userId,
+          display_name: userId,
+          real_name_normalized: userId,
+          display_name_normalized: userId,
+          image_24: '',
+          image_32: '',
+          image_48: '',
+          image_72: '',
+          image_192: '',
+          image_512: '',
+          team: oauthResponse.team.id
+        },
+        is_admin: false,
+        is_owner: false,
+        is_primary_owner: false,
+        is_restricted: false,
+        is_ultra_restricted: false,
+        is_bot: false,
+        updated: Date.now(),
+        is_app_user: false,
+        has_2fa: false
+      };
+
+      console.log('✅ User info retrieved from OAuth:', slackUser.id);
 
       // Check if user already exists
       let user = this.db.getUserBySlackId(slackUser.id);

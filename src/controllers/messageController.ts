@@ -220,6 +220,85 @@ class MessageController {
       } as ApiResponse);
     }
   };
+
+  /**
+   * Send immediate message using TeamAlpha webhook (no auth required)
+   */
+  public sendWebhookMessage = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { message } = req.body;
+
+      if (!message) {
+        res.status(400).json({
+          success: false,
+          error: 'Message is required'
+        } as ApiResponse);
+        return;
+      }
+
+      // Use TeamAlpha webhook directly
+      const teamAlphaWebhook = 'https://hooks.slack.com/services/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';
+
+      await this.slackService.sendWebhookMessage(teamAlphaWebhook, message);
+
+      res.json({
+        success: true,
+        message: 'Message sent successfully to TeamAlpha workspace'
+      } as ApiResponse);
+    } catch (error) {
+      console.error('Error sending webhook message:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send message'
+      } as ApiResponse);
+    }
+  };
+
+  /**
+   * Schedule a message for TeamAlpha webhook (no auth required)
+   */
+  public scheduleWebhookMessage = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { message, scheduled_for } = req.body;
+
+      if (!message || !scheduled_for) {
+        res.status(400).json({
+          success: false,
+          error: 'Message and scheduled_for are required'
+        } as ApiResponse);
+        return;
+      }
+
+      // Create a scheduled message for TeamAlpha webhook
+      const scheduledMessage = this.db.createScheduledMessage({
+        id: uuidv4(),
+        user_id: 'webhook-user', // Special user for webhook messages
+        channel_id: 'teamalpha-webhook',
+        channel_name: 'TeamAlpha Webhook',
+        message,
+        scheduled_for,
+        status: 'pending'
+      });
+
+      res.json({
+        success: true,
+        data: {
+          id: scheduledMessage.id,
+          channel_name: 'TeamAlpha Workspace',
+          message: scheduledMessage.message,
+          scheduled_for: scheduledMessage.scheduled_for,
+          status: scheduledMessage.status
+        },
+        message: 'Message scheduled successfully for TeamAlpha workspace'
+      } as ApiResponse);
+    } catch (error) {
+      console.error('Error scheduling webhook message:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to schedule message'
+      } as ApiResponse);
+    }
+  };
 }
 
 export default MessageController;

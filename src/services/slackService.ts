@@ -96,6 +96,45 @@ class SlackService {
   }
 
   /**
+   * Get user information from Slack using bot token (more reliable)
+   */
+  async getUserInfoWithBotToken(botToken: string, userId: string): Promise<SlackUser> {
+    try {
+      console.log('👤 Getting user info with bot token...');
+      console.log('🔑 Bot token present:', !!botToken);
+      console.log('👤 User ID:', userId);
+
+      // Get the user's detailed information using bot token
+      const response = await axios.get('https://slack.com/api/users.info', {
+        headers: {
+          Authorization: `Bearer ${botToken}`,
+        },
+        params: {
+          user: userId,
+        },
+      });
+
+      console.log('📋 User info response status:', response.status);
+      console.log('📋 User info response ok:', response.data.ok);
+
+      if (!response.data.ok) {
+        console.error('❌ Failed to get user info:', response.data);
+        throw new Error(`Failed to get user info: ${response.data.error}`);
+      }
+
+      console.log('✅ User info retrieved successfully with bot token');
+      return response.data.user;
+    } catch (error) {
+      console.error('❌ Error getting user info with bot token:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('📋 Response data:', error.response?.data);
+        console.error('📋 Response status:', error.response?.status);
+      }
+      throw new Error('Failed to get user information with bot token');
+    }
+  }
+
+  /**
    * Get user information from Slack
    */
   async getUserInfo(accessToken: string): Promise<SlackUser> {

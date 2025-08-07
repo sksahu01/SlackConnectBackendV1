@@ -75,6 +75,37 @@ class DatabaseManager {
     `);
 
     console.log('Database tables initialized successfully');
+
+    // Create special webhook user if it doesn't exist
+    this.ensureWebhookUser();
+  }
+
+  private ensureWebhookUser(): void {
+    try {
+      const existingUser = this.getUserById('webhook-user');
+      if (!existingUser) {
+        const now = Math.floor(Date.now() / 1000);
+        const stmt = this.db.prepare(`
+          INSERT INTO users (id, slack_user_id, team_id, access_token, refresh_token, webhook_url, token_expires_at, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        stmt.run(
+          'webhook-user',
+          'webhook-user',
+          'teamalpha-team',
+          'webhook-token',
+          null,
+          'https://hooks.slack.com/services/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',
+          null,
+          now,
+          now
+        );
+        console.log('Created special webhook user for TeamAlpha scheduling');
+      }
+    } catch (error) {
+      console.log('Webhook user already exists or error creating it');
+    }
   }
 
   // User operations
