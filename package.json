@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
-    "build": "tsc",
+    "build": "npm run clean && tsc",
     "build:watch": "tsc -w",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist || rmdir /s /q dist",
+    "postinstall": "npm run build",
+    "prestart": "npm run build"
   },
   "keywords": [
     "slack",
@@ -45,5 +47,9 @@
     "typescript": "^5.3.3",
     "ts-node": "^10.9.1",
     "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

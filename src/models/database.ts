@@ -6,7 +6,12 @@ class DatabaseManager {
   private db: Database.Database;
 
   constructor() {
-    const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../database/slack-connect.db');
+    let dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../database/slack-connect.db');
+    
+    // In production (Render), ensure we use a writable directory
+    if (process.env.NODE_ENV === 'production') {
+      dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data/slack_connect.db');
+    }
 
     // Ensure database directory exists
     const fs = require('fs');
@@ -15,6 +20,7 @@ class DatabaseManager {
       fs.mkdirSync(dbDir, { recursive: true });
     }
 
+    console.log(`📁 Database path: ${dbPath}`);
     this.db = new Database(dbPath);
     this.initializeTables();
   }

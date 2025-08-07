@@ -77,10 +77,17 @@ class Server {
   }
 
   public start(): void {
-    this.app.listen(this.port, () => {
-      console.log(`🚀 Server running on port ${this.port}`);
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    
+    this.app.listen(this.port, host, () => {
+      console.log(`🚀 Server running on ${host}:${this.port}`);
       console.log(`📅 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 API URL: http://localhost:${this.port}/api`);
+      
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`🔗 API URL: https://slack-connect-backend.onrender.com/api`);
+      } else {
+        console.log(`🔗 API URL: http://localhost:${this.port}/api`);
+      }
 
       // Start the message scheduler
       this.scheduler.start();
