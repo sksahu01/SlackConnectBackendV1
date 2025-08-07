@@ -7,7 +7,7 @@ class DatabaseManager {
 
   constructor() {
     let dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../database/slack-connect.db');
-    
+
     // In production (Render), ensure we use a writable directory
     if (process.env.NODE_ENV === 'production') {
       dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data/slack_connect.db');
