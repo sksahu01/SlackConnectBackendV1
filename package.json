@@ -8,8 +8,7 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "build:watch": "tsc -w",
-    "clean": "rm -rf dist || rmdir /s /q dist || echo 'Clean completed'",
-    "heroku-postbuild": "npm run build"
+    "clean": "if exist dist rmdir /s /q dist"
   },
   "keywords": [
     "slack",
