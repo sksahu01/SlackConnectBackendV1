@@ -33,7 +33,7 @@ class SlackService {
   getAuthUrl(state?: string): string {
     const params = new URLSearchParams({
       client_id: this.clientId,
-      scope: 'channels:read,chat:write,users:read,incoming-webhook',
+      scope: 'channels:read,groups:read,chat:write,users:read,incoming-webhook',
       redirect_uri: this.redirectUri,
       response_type: 'code',
       user_scope: 'identity.basic,identity.email,identity.team', // User token scopes
@@ -196,30 +196,65 @@ class SlackService {
       console.log('📋 Getting channels with bot token...');
       console.log('🔑 Bot token present:', !!botToken);
 
-      const response = await axios.get('https://slack.com/api/conversations.list', {
-        headers: {
-          Authorization: `Bearer ${botToken}`,
-        },
-        params: {
-          types: 'public_channel,private_channel',
-          exclude_archived: true,
-          limit: 1000, // Get more channels
-        },
-      });
+      // Try multiple approaches to get all channels
+      const channelSets: SlackChannel[][] = [];
 
-      console.log('📋 Bot channels response status:', response.status);
-      console.log('📋 Bot channels response ok:', response.data.ok);
+      // 1. Get public channels
+      try {
+        const publicResponse = await axios.get('https://slack.com/api/conversations.list', {
+          headers: {
+            Authorization: `Bearer ${botToken}`,
+          },
+          params: {
+            types: 'public_channel',
+            exclude_archived: true,
+            limit: 1000,
+          },
+        });
 
-      if (!response.data.ok) {
-        console.error('❌ Failed to get channels with bot token:', response.data);
-        throw new Error(`Failed to get channels: ${response.data.error}`);
+        if (publicResponse.data.ok) {
+          console.log('✅ Retrieved public channels:', publicResponse.data.channels?.length || 0);
+          channelSets.push(publicResponse.data.channels || []);
+        } else {
+          console.log('⚠️ Failed to get public channels:', publicResponse.data.error);
+        }
+      } catch (error) {
+        console.log('⚠️ Error getting public channels:', error);
       }
 
-      const channels = response.data.channels || [];
-      console.log('✅ Retrieved channels with bot token:', channels.length);
+      // 2. Get private channels (if bot has access)
+      try {
+        const privateResponse = await axios.get('https://slack.com/api/conversations.list', {
+          headers: {
+            Authorization: `Bearer ${botToken}`,
+          },
+          params: {
+            types: 'private_channel',
+            exclude_archived: true,
+            limit: 1000,
+          },
+        });
+
+        if (privateResponse.data.ok) {
+          console.log('✅ Retrieved private channels:', privateResponse.data.channels?.length || 0);
+          channelSets.push(privateResponse.data.channels || []);
+        } else {
+          console.log('⚠️ Failed to get private channels:', privateResponse.data.error);
+        }
+      } catch (error) {
+        console.log('⚠️ Error getting private channels:', error);
+      }
+
+      // 3. Combine and deduplicate channels
+      const allChannels = channelSets.flat();
+      const uniqueChannels = allChannels.filter((channel, index, self) =>
+        index === self.findIndex(c => c.id === channel.id)
+      );
+
+      console.log('✅ Total unique channels found:', uniqueChannels.length);
 
       // Return all accessible channels
-      return channels.filter((channel: SlackChannel) => !channel.is_archived);
+      return uniqueChannels.filter((channel: SlackChannel) => !channel.is_archived);
     } catch (error) {
       console.error('❌ Error getting channels with bot token:', error);
       throw error;
@@ -234,95 +269,130 @@ class SlackService {
       console.log('📋 Getting channels...');
       console.log('🔑 Access token present:', !!accessToken);
 
-      // First, try to get all conversations
-      const response = await axios.get('https://slack.com/api/conversations.list', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        params: {
-          types: 'public_channel,private_channel',
-          exclude_archived: true,
-          limit: 100,
-        },
-      });
+      const channelSets: SlackChannel[][] = [];
 
-      console.log('📋 Channels response status:', response.status);
-      console.log('📋 Channels response ok:', response.data.ok);
+      // Approach 1: Try to get all conversations (public + private)
+      try {
+        const allResponse = await axios.get('https://slack.com/api/conversations.list', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            types: 'public_channel,private_channel',
+            exclude_archived: true,
+            limit: 1000,
+          },
+        });
 
-      if (!response.data.ok) {
-        console.error('❌ Failed to get channels:', response.data);
+        console.log('📋 All channels response status:', allResponse.status);
+        console.log('📋 All channels response ok:', allResponse.data.ok);
 
-        // If we don't have permission to list channels, return a default channel list
-        if (response.data.error === 'missing_scope' || response.data.error === 'not_authed') {
-          console.log('⚠️ Insufficient permissions for channels.list, trying alternative approach...');
-
-          // Try to get user's conversations (channels they're a member of)
-          try {
-            const userConversationsResponse = await axios.get('https://slack.com/api/users.conversations', {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-              params: {
-                types: 'public_channel,private_channel',
-                exclude_archived: true,
-                limit: 100,
-              },
-            });
-
-            if (userConversationsResponse.data.ok) {
-              console.log('✅ Retrieved user conversations successfully');
-              return userConversationsResponse.data.channels || [];
-            }
-          } catch (conversationError) {
-            console.error('❌ Failed to get user conversations:', conversationError);
-          }
-
-          // If all else fails, return a general channel option
-          console.log('⚠️ Returning fallback channel options');
-          return [
-            {
-              id: 'general',
-              name: 'general',
-              is_channel: true,
-              is_group: false,
-              is_im: false,
-              is_mpim: false,
-              is_private: false,
-              created: Date.now() / 1000,
-              is_archived: false,
-              is_general: true,
-              unlinked: 0,
-              name_normalized: 'general',
-              is_shared: false,
-              is_ext_shared: false,
-              is_org_shared: false,
-              pending_shared: [],
-              pending_connected_team_ids: [],
-              is_member: true,
-              is_pending_ext_shared: false,
-              topic: { value: '', creator: '', last_set: 0 },
-              purpose: { value: 'This is the #general channel', creator: '', last_set: 0 },
-              num_members: 0
-            }
-          ];
+        if (allResponse.data.ok) {
+          console.log('✅ Retrieved all channels:', allResponse.data.channels?.length || 0);
+          channelSets.push(allResponse.data.channels || []);
+        } else {
+          console.log('⚠️ Failed to get all channels:', allResponse.data.error);
         }
-
-        throw new Error(`Failed to get channels: ${response.data.error}`);
+      } catch (error) {
+        console.log('⚠️ Error getting all channels:', error);
       }
 
-      console.log('📋 Found channels:', response.data.channels?.length || 0);
+      // Approach 2: If we didn't get many channels, try public channels only
+      if (channelSets.length === 0 || channelSets[0].length < 2) {
+        try {
+          const publicResponse = await axios.get('https://slack.com/api/conversations.list', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            params: {
+              types: 'public_channel',
+              exclude_archived: true,
+              limit: 1000,
+            },
+          });
 
-      // Return all channels (let frontend handle filtering if needed)
-      const channels = response.data.channels || [];
+          if (publicResponse.data.ok) {
+            console.log('✅ Retrieved public channels as fallback:', publicResponse.data.channels?.length || 0);
+            if (channelSets.length === 0) {
+              channelSets.push(publicResponse.data.channels || []);
+            }
+          }
+        } catch (error) {
+          console.log('⚠️ Error getting public channels:', error);
+        }
+      }
 
-      // Filter channels where the user is a member (if the property exists)
-      const filteredChannels = channels.filter((channel: SlackChannel) => {
-        // Some workspaces don't return is_member property, so we include all accessible channels
-        return !channel.is_archived && (channel.is_member !== false);
-      });
+      // Approach 3: Try user's conversations (channels they're a member of)
+      if (channelSets.length === 0 || channelSets[0].length < 2) {
+        try {
+          const userConversationsResponse = await axios.get('https://slack.com/api/users.conversations', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            params: {
+              types: 'public_channel,private_channel',
+              exclude_archived: true,
+              limit: 1000,
+            },
+          });
 
-      console.log('✅ Filtered channels:', filteredChannels.length);
-      return filteredChannels;
+          if (userConversationsResponse.data.ok) {
+            console.log('✅ Retrieved user conversations:', userConversationsResponse.data.channels?.length || 0);
+            if (channelSets.length === 0) {
+              channelSets.push(userConversationsResponse.data.channels || []);
+            }
+          }
+        } catch (conversationError) {
+          console.error('❌ Failed to get user conversations:', conversationError);
+        }
+      }
+
+      // If we have channels, process them
+      if (channelSets.length > 0 && channelSets[0].length > 0) {
+        const allChannels = channelSets.flat();
+        const uniqueChannels = allChannels.filter((channel, index, self) =>
+          index === self.findIndex(c => c.id === channel.id)
+        );
+
+        // Filter channels where the user is a member (if the property exists)
+        const filteredChannels = uniqueChannels.filter((channel: SlackChannel) => {
+          return !channel.is_archived && (channel.is_member !== false);
+        });
+
+        console.log('✅ Final filtered channels:', filteredChannels.length);
+        return filteredChannels;
+      }
+
+      // If all else fails, return a basic channel set including general
+      console.log('⚠️ Returning basic fallback channel options');
+      return [
+        {
+          id: 'general',
+          name: 'general',
+          is_channel: true,
+          is_group: false,
+          is_im: false,
+          is_mpim: false,
+          is_private: false,
+          is_archived: false,
+          is_general: true,
+          is_shared: false,
+          is_member: true
+        },
+        {
+          id: 'random',
+          name: 'random',
+          is_channel: true,
+          is_group: false,
+          is_im: false,
+          is_mpim: false,
+          is_private: false,
+          is_archived: false,
+          is_general: false,
+          is_shared: false,
+          is_member: true
+        }
+      ];
     } catch (error) {
       console.error('❌ Error getting channels:', error);
       if (axios.isAxiosError(error)) {
@@ -341,21 +411,10 @@ class SlackService {
           is_im: false,
           is_mpim: false,
           is_private: false,
-          created: Date.now() / 1000,
           is_archived: false,
           is_general: true,
-          unlinked: 0,
-          name_normalized: 'general',
           is_shared: false,
-          is_ext_shared: false,
-          is_org_shared: false,
-          pending_shared: [],
-          pending_connected_team_ids: [],
-          is_member: true,
-          is_pending_ext_shared: false,
-          topic: { value: '', creator: '', last_set: 0 },
-          purpose: { value: 'This is the #general channel', creator: '', last_set: 0 },
-          num_members: 0
+          is_member: true
         }
       ];
     }
