@@ -38,6 +38,26 @@ export interface SlackChannel {
   is_general: boolean;
   is_shared: boolean;
   is_member: boolean;
+  // Additional Slack API properties
+  created?: number;
+  unlinked?: number;
+  name_normalized?: string;
+  is_ext_shared?: boolean;
+  is_org_shared?: boolean;
+  pending_shared?: any[];
+  pending_connected_team_ids?: string[];
+  is_pending_ext_shared?: boolean;
+  topic?: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  purpose?: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  num_members?: number;
 }
 
 export interface SlackUser {

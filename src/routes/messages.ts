@@ -18,6 +18,7 @@ router.use(authenticateToken);
 
 // Channel management
 router.get('/channels', messageController.getChannels);
+router.get('/debug/channels', messageController.debugChannels);
 
 // Immediate messaging
 router.post('/send', validate(schemas.sendMessage), messageController.sendMessage);
