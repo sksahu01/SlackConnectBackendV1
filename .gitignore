@@ -67,3 +67,17 @@ debug-oauth.ps1
 test-slack-config.ps1
 test-channels.ps1
 OAUTH_SCOPE_FIX.md
+verify-build.sh
+test-webhook.sh
+test-webhook-api.ps1
+test-teamalpha-webhook.sh
+test-teamalpha-webhook.ps1
+test-production.sh
+test-build.sh
+teamalpha-complete-test.ps1
+build.sh
+build-render.sh
+TEAMALPHA-SLACK-GUIDE.md
+debug-render.sh
+TEAMALPHA-API-DOCS.md
+LOCAL-TESTING-SETUP.md
