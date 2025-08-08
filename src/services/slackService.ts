@@ -36,7 +36,7 @@ class SlackService {
       scope: 'channels:read,chat:write,users:read,incoming-webhook',
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      user_scope: 'identity.basic,identity.email,identity.team,channels:read', // User token scopes
+      user_scope: 'identity.basic,identity.email,identity.team', // User token scopes
     });
 
     if (state) {

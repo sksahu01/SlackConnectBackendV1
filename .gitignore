@@ -66,3 +66,4 @@ SLACK_OAUTH_FIX.md
 debug-oauth.ps1
 test-slack-config.ps1
 test-channels.ps1
+OAUTH_SCOPE_FIX.md
